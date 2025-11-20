@@ -1,0 +1,50 @@
+﻿Nội dung Prompt Chi Tiết Yêu Cầu Tạo Pipeline Dự Án
+Hãy tạo ra hai tệp tài liệu chi tiết cho dự án web quản lý bãi đỗ xe thông minh (Smart Parking Management System) theo yêu cầu sau:
+1. File "Pipeline Tổng Quát" (pipeline_tong_quat.md): Tệp này phải chứa các mục sau, được trình bày một cách rõ ràng và logic:
+* I. Mô tả Dự án (Project Overview):
+   * Giới thiệu & Mục tiêu: Tổng quan về dự án, vai trò của AI/Computer Vision.
+   * Đối tượng sử dụng & Phân biệt: Phân loại rõ ràng 2 trường hợp (Tài xế/User và Quản lý/Admin) và cơ chế phân quyền (dựa trên loại tài khoản/đăng ký).
+   * Cách thức Hoạt động Tổng quát (High-Level Operation Flow): Tóm tắt chu trình từ Xe vào -> Đăng ký -> AI xử lý -> Trực quan hóa -> Xe ra.
+* II. Mô hình & Cấu trúc (Model and Structure):
+   * Mô hình AI: Chi tiết các model cần thiết (Object Detection, License Plate Reading, Object Tracking, một model cho Cảnh báo bất thường).
+   * Cấu trúc 3 Tầng Web: Phân tích chức năng và công nghệ dự kiến cho Front-end (UI, Canvas 2D), Back-end (AI Processing, API, Email), và Dataset/Storage (Firestore, Video Stream).
+   * Cấu trúc Tab Website (6 Tabs) và Thành phần UI chi tiết:
+      * Tab Home (Trang Chủ):
+         * Bố cục & Giao diện: Thiết kế trung tâm, thân thiện với di động.
+         * Thành phần UI: 3-4 Thẻ Trạng thái (Status Cards) lớn, hiển thị số liệu thống kê real-time (Tổng Vị trí, Đã chiếm, Khả dụng). Màu sắc chỉ thị: Xanh lá (Tốt), Đỏ (Quá tải/Cảnh báo). Khu vực Thông báo chung.
+      * Tab Đăng Ký (Check-in):
+         * Bố cục & Giao diện: Giao diện 2 cột hoặc chia dọc trên di động. Cột bên trái là Form nhập liệu (Tên, Email, Biển số). Cột bên phải là Khu vực Camera/Upload ảnh (yêu cầu hình ảnh rõ biển số).
+         * Thành phần UI: Nút Xác nhận nổi bật, Modal thông báo thành công (Hiển thị "ID xe 7 chữ số đã được gửi qua email của bạn").
+      * Tab Theo Dõi Bãi Đỗ - Xe (Live View):
+         * Bố cục & Giao diện: Giao diện chính (70% diện tích) dành cho Trực quan hóa 2D (Canvas/SVG). Sidebar bên phải (30% diện tích) dành cho control và data. (Sẽ chuyển sang xếp chồng trên mobile).
+         * Khu vực chính: Bãi đỗ được vẽ lại với màu sắc trạng thái: Xanh lá (Trống), Đỏ (Đã đỗ), Vàng (Xe đang di chuyển/Cảnh báo).
+         * Sidebar (User): Form nhập ID xe (7 chữ số). Khung hiển thị Ảnh Cắt (Cropped Image) riêng xe đó (Kích thước cố định, ví dụ 200x150px).
+         * Sidebar (Admin): Bảng tóm tắt real-time các xe đang đỗ (Biển số, Vị trí đỗ, Thời gian vào).
+      * Tab Cảnh Báo Tình Huống Bất Thường (Alerts):
+         * Bố cục & Giao diện: Giao diện tập trung vào Bảng Dữ liệu (Data Table) toàn màn hình và hiện thị tổng quan bãi đỗ đã được trực quan hóa 2D
+         * Thành phần UI: Bảng hiển thị các cột: ID Cảnh báo, Loại, Vị trí tọa độ, Thời gian, ID Xe liên quan. Sử dụng Badge màu đỏ cho cảnh báo chưa giải quyết (resolved: false). Nút Thao tác "Mark as Resolved" (chỉ hiển thị cho Admin).
+      * Tab Quản Lý (Admin Dashboard - CHỈ ADMIN):
+         * Bố cục & Giao diện: Giao diện điều khiển (Dashboard) chia thành các Module có thể thu gọn (Accordion) hoặc Tab nội bộ.
+         * Module 1 (Thiết lập Vị trí): Khu vực Upload ảnh bãi đỗ. Canvas/Editor cho phép Admin vẽ polygon định nghĩa các ô đỗ thủ công (Drawing Tool). Nút Lưu cấu hình và Detect Auto (dùng AI để phát hiện ban đầu).
+         * Module 2 (Giám sát Chi tiết): Bảng quản lý chi tiết (Biển số, Email, Thời gian vào/ra, ID xe, URL Ảnh demo). Nút Check-out rõ ràng.
+      * Tab Tính năng Phát triển (Future/Experimental Features):
+         * Bố cục & Giao diện: Giao diện module hóa, các tính năng được đặt trong các card/khối riêng biệt.
+         * Thành phần UI: Module Tính phí đỗ xe (form nhập/chọn ID xe, hiển thị kết quả phí). Khu vực hiển thị Biểu đồ thống kê (Biểu đồ cột/đường cho lưu lượng xe).
+* III. Các Bước Thực hiện Tổng quát (High-Level Implementation Steps):
+   * Chia dự án thành ít nhất 6 giai đoạn chính, tập trung vào các mốc quan trọng (Milestones) và kết quả mong đợi.
+2. File "Pipeline Chi Tiết" (pipeline_chi_tiet.md): Tệp này phải mở rộng các bước trong Pipeline Tổng Quát (Mục III), được trình bày dưới dạng bảng chi tiết cho từng công việc. Mỗi bước cần có 4 cột thông tin bắt buộc:
+* Công việc (Task): Tên công việc cụ thể.
+* Phân tích & Hướng dẫn chi tiết: Giải thích sâu hơn về logic nghiệp vụ, thuật toán, và hướng dẫn kỹ thuật cụ thể.
+* Code minh họa: Cung cấp các đoạn code chi tiết (cho Firebase/JavaScript hoặc giả lập cho Logic AI/Back-end).
+* Lưu ý (Important Notes): Các điểm cần quan tâm về hiệu năng, bảo mật (Security Rules), hoặc tối ưu hóa.
+Các yêu cầu chức năng phải được thể hiện rõ trong cả hai file:
+* Đăng ký & ID Xe: Mã QR dẫn đến tab Đăng ký. Tài xế nhập liệu (Tên, Email, Biển số), nhận ID xe 7 chữ số riêng biệt (mới cho mỗi lượt vào) qua email. ID này là key chính để theo dõi xe.
+* Theo dõi & Trực quan hóa: Hỗ trợ Upload Video hoặc Live Camera. AI xử lý: detect, nhận dạng biển số (LPR), tracking. Front-end vẽ lại bãi đỗ 2D theo tọa độ từ AI.
+* Phân quyền Tài xế (User): Tài xế chỉ có thể xem hình ảnh cắt (crop) riêng xe của mình sau khi nhập ID xe.
+* Tính năng Quản lý (Admin Only):
+   1. Thiết lập Bãi đỗ: Upload ảnh bãi đỗ ban đầu -> AI detect vị trí -> Admin Detect/Chỉnh sửa thủ công các vị trí thiếu.
+   2. Bảng quản lý: Xem chi tiết tất cả xe (ảnh demo, biển số, thời gian vào/ra, email, ID xe).
+   3. Tất cả tính năng của Tài xế.
+* Cảnh báo Khẩn cấp: Logic Back-end phát hiện bất thường -> Gửi thông báo Email và hiển thị trên Website (Tab Cảnh Báo).
+* Tab Tính năng Phát triển (Mới): Dùng để thử nghiệm các tính năng mới/phụ trợ, ví dụ: Tính toán phí đỗ xe, Biểu đồ thống kê, Đề xuất tối ưu.
+*
