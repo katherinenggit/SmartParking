@@ -15,6 +15,10 @@ cd frontend
 npm install
 npm run dev
 
+### Server
+cd server
+npm start
+
 
 ## 📚 Tài Liệu
 
