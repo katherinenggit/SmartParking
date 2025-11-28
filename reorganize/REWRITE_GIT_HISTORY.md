@@ -415,7 +415,7 @@ xcopy SmartParking_backup_git SmartParking /E /I /H
 
 ---
 
-**Chúc bạn rewrite thành công! 🎉**
+**Rewrite thành công! 🎉**
 
-Nếu gặp lỗi, đọc phần "XỬ LÝ LỖI" hoặc hỏi tôi.
+
 
