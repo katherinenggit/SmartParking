@@ -1,6 +1,6 @@
 # Core dependencies
 opencv-python>=4.8.0
-numpy>=1.24.0
+numpy>=2.0.0,<2.3.0
 
 # Object Detection & Tracking
 # ultralytics includes YOLO with built-in ByteTrack algorithm

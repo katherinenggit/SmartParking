@@ -36,7 +36,7 @@ SAM3 (Segment Anything Model 3) có thể cần cài đặt từ GitHub:
 ```bash
 # Clone repository
 git clone https://github.com/facebookresearch/segment-anything-3.git
-cd segment-anything-3
+cd sam3
 pip install -e .
 
 # Hoặc cài trực tiếp

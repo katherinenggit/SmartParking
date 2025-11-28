@@ -12,6 +12,7 @@ import { MultiStreamHostPage } from './pages/MultiStreamHostPage';
 import { StreamViewerPage } from './pages/StreamViewerPage';
 import { MultiStreamViewerPage } from './pages/MultiStreamViewerPage';
 import { PlateHistoryPage } from './pages/PlateHistoryPage';
+import { ObjectTrackingPage } from './pages/ObjectTrackingPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
@@ -156,6 +157,20 @@ function App() {
               )}
               {user && (
                 <NavLink
+                  to="/tracking"
+                  className={({ isActive }) =>
+                    `px-4 py-2 rounded-lg font-medium ${
+                      isActive
+                        ? 'bg-matcha-400 text-matcha-950 border border-matcha-600 shadow-inner'
+                        : 'bg-white text-matcha-800 border border-matcha-100 hover:bg-matcha-50'
+                    }`
+                  }
+                >
+                  🎯 Object Tracking
+                </NavLink>
+              )}
+              {user && (
+                <NavLink
                   to="/account"
                   className={({ isActive }) =>
                     `px-4 py-2 rounded-lg font-medium ${
@@ -289,6 +304,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <MultiStreamViewerPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/tracking" 
+            element={
+              <ProtectedRoute>
+                <ObjectTrackingPage />
               </ProtectedRoute>
             } 
           />

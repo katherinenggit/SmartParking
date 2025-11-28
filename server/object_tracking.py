@@ -120,9 +120,24 @@ def process_video_frame_by_frame(
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
     # Create output video writer
+    # Use H.264 codec for better browser compatibility
     output_path = os.path.join(tempfile.gettempdir(), f"tracked_{os.path.basename(video_path)}")
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    # Try H.264 first, fallback to mp4v
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
+    if not os.path.exists(output_path.replace('.mp4', '_temp.mp4')):
+        # Try alternative codec if H.264 not available
+        try:
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+            if not out.isOpened():
+                # Fallback to mp4v
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+        except:
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    else:
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
     frame_count = 0
     processed_frames = 0
@@ -167,12 +182,20 @@ def process_video_frame_by_frame(
             
             for i, (box, score, cls, tid) in enumerate(zip(boxes, scores, classes, track_ids)):
                 x1, y1, x2, y2 = map(int, box)
+                # Convert numpy types to Python native types
+                track_id = None
+                if tid is not None and tid >= 0:
+                    if isinstance(tid, (np.integer, np.int64, np.int32)):
+                        track_id = int(tid)
+                    else:
+                        track_id = int(tid)
+                
                 detections.append({
-                    'bbox': [x1, y1, x2 - x1, y2 - y1],  # [x, y, w, h]
+                    'bbox': [int(x1), int(y1), int(x2 - x1), int(y2 - y1)],  # [x, y, w, h]
                     'confidence': float(score),
                     'class': int(cls),
-                    'class_name': model.names[int(cls)],
-                    'track_id': int(tid) if tid >= 0 else None
+                    'class_name': str(model.names[int(cls)]),
+                    'track_id': track_id
                 })
                 
                 # Update track history
@@ -243,10 +266,10 @@ def process_video_frame_by_frame(
         # Write frame to output video
         out.write(annotated_frame)
         
-        # Store frame results
+        # Store frame results (ensure all values are Python native types)
         all_tracks.append({
-            'frame': frame_count,
-            'timestamp': frame_count / fps,
+            'frame': int(frame_count),
+            'timestamp': float(frame_count / fps),
             'detections': detections
         })
         
@@ -266,6 +289,10 @@ def process_video_frame_by_frame(
         video_bytes = f.read()
     video_b64 = base64.b64encode(video_bytes).decode('utf-8')
     
+    # Use webm or mp4 MIME type based on codec
+    # For better browser compatibility, use mp4
+    video_mime = 'video/mp4'
+    
     # Clean up temp file
     try:
         os.remove(output_path)
@@ -277,23 +304,28 @@ def process_video_frame_by_frame(
     for frame_data in all_tracks:
         for det in frame_data['detections']:
             if det['track_id'] is not None:
-                unique_tracks.add(det['track_id'])
+                # Ensure track_id is Python int, not numpy.int64
+                tid = det['track_id']
+                if isinstance(tid, (np.integer, np.int64, np.int32)):
+                    tid = int(tid)
+                unique_tracks.add(tid)
     
+    # Ensure all return values are Python native types
     return {
         'success': True,
-        'total_frames': total_frames,
-        'processed_frames': processed_frames,
-        'unique_tracks': len(unique_tracks),
-        'video_width': width,
-        'video_height': height,
-        'fps': fps,
-        'annotatedVideo': f"data:video/mp4;base64,{video_b64}",
+        'total_frames': int(total_frames),
+        'processed_frames': int(processed_frames),
+        'unique_tracks': int(len(unique_tracks)),
+        'video_width': int(width),
+        'video_height': int(height),
+        'fps': int(fps),
+        'annotatedVideo': f"data:{video_mime};base64,{video_b64}",
         'tracks': to_serializable(all_tracks),
         'track_history': to_serializable(track_history),
         'summary': {
-            'total_objects_detected': len(unique_tracks),
-            'total_detections': sum(len(f['detections']) for f in all_tracks),
-            'avg_detections_per_frame': sum(len(f['detections']) for f in all_tracks) / max(processed_frames, 1)
+            'total_objects_detected': int(len(unique_tracks)),
+            'total_detections': int(sum(len(f['detections']) for f in all_tracks)),
+            'avg_detections_per_frame': float(sum(len(f['detections']) for f in all_tracks) / max(processed_frames, 1))
         }
     }
 

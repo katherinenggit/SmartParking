@@ -1,8 +1,0 @@
-# Dua tu may len git
-git add . //add tat ca file moi
-git add path_file
-
-git commit -m "Pipeline tong quat"
-
-# Dua tu git len github
-git push origin main

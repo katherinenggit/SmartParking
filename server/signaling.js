@@ -10,6 +10,7 @@ import { existsSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const plateScriptPath = path.join(__dirname, 'plate_detect.py');
+const trackingScriptPath = path.join(__dirname, 'object_tracking.py');
 
 // Detect Python path - ưu tiên venv, sau đó dùng system Python
 function getPythonPath() {
@@ -33,7 +34,9 @@ function getPythonPath() {
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '25mb' }));
+// Tăng body size limit cho video upload (100MB)
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'signaling+alpr' });
@@ -65,6 +68,43 @@ app.post('/api/plate-detect', async (req, res) => {
         error instanceof Error
           ? error.message
           : 'Plate detection failed. Ensure Python + fast-alpr are installed.',
+    });
+  }
+});
+
+app.post('/api/object-tracking', async (req, res) => {
+  try {
+    const { videoData, frameSkip, confThreshold, iouThreshold, useSAM3 } = req.body;
+    
+    if (!videoData || typeof videoData !== 'string') {
+      return res.status(400).json({ success: false, error: 'videoData is required (base64 encoded video)' });
+    }
+    
+    console.log('📥 Received object tracking request, videoData length:', videoData.length);
+    
+    const result = await runObjectTracking({
+      videoData,
+      frameSkip: frameSkip || 1,
+      confThreshold: confThreshold || 0.25,
+      iouThreshold: iouThreshold || 0.45,
+      useSAM3: useSAM3 || false,
+    });
+    
+    console.log('📤 Object tracking result:', {
+      success: result.success,
+      processedFrames: result.processed_frames || result.processedFrames,
+      uniqueTracks: result.unique_tracks || result.uniqueTracks,
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error('❌ Object tracking error:', error);
+    res.status(500).json({
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Object tracking failed. Ensure Python + ultralytics + byte-track are installed.',
     });
   }
 });
@@ -221,9 +261,10 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 server.listen(3001, () => {
-  console.log('🚀 Signaling + ALPR server starting...');
+  console.log('🚀 Signaling + ALPR + Tracking server starting...');
   console.log('📡 WebSocket listening on ws://localhost:3001');
   console.log('🧠 ALPR API ready at POST http://localhost:3001/api/plate-detect');
+  console.log('🎯 Object Tracking API ready at POST http://localhost:3001/api/object-tracking');
   console.log('⏳ Waiting for connections...');
   
   // Test Python path khi server start
@@ -268,6 +309,70 @@ function runPlateDetection(imageData) {
     });
 
     python.stdin.write(JSON.stringify({ imageData }));
+    python.stdin.end();
+  });
+}
+
+function runObjectTracking({ videoData, frameSkip, confThreshold, iouThreshold, useSAM3 }) {
+  return new Promise((resolve, reject) => {
+    const pythonPath = getPythonPath();
+    const python = spawn(pythonPath, [trackingScriptPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: __dirname,
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    python.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    python.stderr.on('data', (data) => {
+      stderr += data.toString();
+      // Log progress messages to console
+      const message = data.toString().trim();
+      if (message && !message.includes('Traceback')) {
+        console.log(`[Tracking] ${message}`);
+      }
+    });
+
+    python.on('error', (error) => {
+      reject(error);
+    });
+
+    python.on('close', (code) => {
+      if (code !== 0) {
+        return reject(new Error(stderr || `Python process exited with code ${code}`));
+      }
+      try {
+        // Find the last JSON object in stdout (in case there are progress messages)
+        const lines = stdout.split('\n');
+        let jsonLine = '';
+        for (let i = lines.length - 1; i >= 0; i--) {
+          if (lines[i].trim().startsWith('{')) {
+            jsonLine = lines[i].trim();
+            break;
+          }
+        }
+        if (!jsonLine) {
+          jsonLine = stdout.trim();
+        }
+        resolve(JSON.parse(jsonLine));
+      } catch (err) {
+        console.error('Failed to parse tracking result:', err);
+        console.error('stdout:', stdout);
+        reject(new Error(`Failed to parse result: ${err.message}`));
+      }
+    });
+
+    python.stdin.write(JSON.stringify({
+      videoData,
+      frameSkip,
+      confThreshold,
+      iouThreshold,
+      useSAM3,
+    }));
     python.stdin.end();
   });
 }

@@ -49,6 +49,17 @@ export function ObjectTrackingPage() {
       return;
     }
 
+    // Check file size (100MB limit)
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > 100) {
+      setError(`Video quá lớn (${fileSizeMB.toFixed(2)}MB)! Vui lòng chọn video nhỏ hơn 100MB hoặc nén video trước khi upload.`);
+      return;
+    }
+
+    if (fileSizeMB > 50) {
+      console.warn(`⚠️ Large video file: ${fileSizeMB.toFixed(2)}MB - upload may take time`);
+    }
+
     setVideoFile(file);
     setVideoPreview(URL.createObjectURL(file));
     setResult(null);
@@ -88,6 +99,13 @@ export function ObjectTrackingPage() {
       
       setProgress('Đang gửi video lên server...');
       
+      // Check video size (warn if > 50MB)
+      const videoSizeMB = videoFile.size / (1024 * 1024);
+      if (videoSizeMB > 50) {
+        console.warn(`⚠️ Video size: ${videoSizeMB.toFixed(2)}MB - may take a while to upload`);
+        setProgress(`Video lớn (${videoSizeMB.toFixed(2)}MB), đang upload...`);
+      }
+      
       // Send to backend
       const response = await fetch(API_URL, {
         method: 'POST',
@@ -104,8 +122,11 @@ export function ObjectTrackingPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        if (response.status === 413) {
+          throw new Error('Video quá lớn! Vui lòng chọn video nhỏ hơn 100MB hoặc nén video trước khi upload.');
+        }
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+        throw new Error(errorData.error || `Lỗi server: ${response.status}`);
       }
 
       setProgress('Đang xử lý video...');
@@ -115,18 +136,35 @@ export function ObjectTrackingPage() {
         throw new Error(data.error || 'Processing failed');
       }
 
-      setResult(data);
+      // Sanitize data to ensure no numpy types remain
+      const sanitizedData: TrackingResult = {
+        ...data,
+        // Convert any remaining numpy types in nested objects
+        tracks: data.tracks ? JSON.parse(JSON.stringify(data.tracks)) : data.tracks,
+        track_history: data.track_history ? JSON.parse(JSON.stringify(data.track_history)) : data.track_history,
+      };
+
+      setResult(sanitizedData);
       setProgress('Hoàn tất!');
       
       // Auto-play result video
       setTimeout(() => {
-        if (resultVideoRef.current) {
-          resultVideoRef.current.play().catch(console.error);
+        if (resultVideoRef.current && sanitizedData.annotatedVideo) {
+          resultVideoRef.current.load(); // Reload video element
+          resultVideoRef.current.play().catch((err) => {
+            console.warn('Video autoplay failed:', err);
+          });
         }
       }, 500);
     } catch (err) {
-      console.error('Tracking error:', err);
-      setError(err instanceof Error ? err.message : 'Lỗi không xác định');
+      // Handle JSON parsing errors gracefully
+      if (err instanceof TypeError && err.message.includes('numpy')) {
+        console.error('Data serialization error - server may need restart:', err);
+        setError('Lỗi xử lý dữ liệu. Vui lòng restart server và thử lại.');
+      } else {
+        console.error('Tracking error:', err);
+        setError(err instanceof Error ? err.message : 'Lỗi không xác định');
+      }
       setProgress('');
     } finally {
       setProcessing(false);
@@ -299,8 +337,14 @@ export function ObjectTrackingPage() {
                 src={result.annotatedVideo}
                 controls
                 className="w-full rounded-lg border border-strawberry-200"
-                autoPlay
-              />
+                preload="auto"
+                onError={(e) => {
+                  console.error('Video playback error:', e);
+                  setError('Không thể phát video. Có thể do format không được hỗ trợ.');
+                }}
+              >
+                Trình duyệt của bạn không hỗ trợ video tag.
+              </video>
             </div>
           )}
 
